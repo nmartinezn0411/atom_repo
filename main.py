@@ -1,12 +1,46 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Security
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 from agent_runtime import ask_agent
+import os
+from typing import Optional
 
 # Crear instancia del API
 app = FastAPI(title="Text-to-SQL Agent (LangGraph + Gemini)", version="1.0.0")
 
-# Configuraciones de comunicación, se da permiso a todo
+# Configuración de API Key
+API_KEY_NAME = "X-API-Key"
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+
+# Get API keys from environment variable (more secure)
+def get_valid_api_keys():
+    api_keys_str = os.getenv("VALID_API_KEYS")
+    api_keys = {}
+    for key_pair in api_keys_str.split(","):
+        if ":" in key_pair:
+            key, name = key_pair.split(":", 1)
+            api_keys[key.strip()] = name.strip()
+    return api_keys
+
+VALID_API_KEYS = get_valid_api_keys()
+
+async def validate_api_key(api_key: Optional[str] = Security(api_key_header)):
+    if not api_key:
+        raise HTTPException(
+            status_code=401, 
+            detail="API Key required. Please include 'X-API-Key' in headers."
+        )
+    
+    if api_key not in VALID_API_KEYS:
+        raise HTTPException(
+            status_code=401, 
+            detail="Invalid API Key"
+        )
+    
+    return api_key
+
+# Configuraciones de comunicación
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -26,7 +60,7 @@ def health():
 
 # Endpoint para preguntas
 @app.post("/ask")
-def ask(req: AskRequest):
+def ask(req: AskRequest, api_key: str = Depends(validate_api_key)):
     # Se valida que la pregunta no esté vacia
     q = (req.question or "").strip()
     if not q:
