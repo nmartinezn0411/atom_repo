@@ -2,15 +2,15 @@ import sqlite3
 import os
 
 def create_database():
-    # Remove existing database file if it exists
+    # Remover archivo existente si existe
     if os.path.exists('ventas.db'):
         os.remove('ventas.db')
     
-    # Connect to SQLite database (creates it if it doesn't exist)
+    # Conectar a base de datos SQLite
     conn = sqlite3.connect('ventas.db')
     cursor = conn.cursor()
     
-    # Create table
+    # Crear tabla
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS ventas (
         id INTEGER PRIMARY KEY,
@@ -22,21 +22,22 @@ def create_database():
     )
     ''')
     
-    # Insert data
+    # Insertar data
     ventas_data = [
         (1, 'iPhone 14', 'smartphones', 1300, 'Argentina', '2024-05-10'),
         (2, 'MacBook Air', 'notebooks', 1800, 'Chile', '2024-05-12')
     ]
     
+    # Ejectar comando de insertar data
     cursor.executemany('''
     INSERT INTO ventas (id, producto, categoria, precio, pais, fecha_venta)
     VALUES (?, ?, ?, ?, ?, ?)
     ''', ventas_data)
     
-    # Commit changes and close connection
+    # Se realiza Commit a los cambnios
     conn.commit()
     
-    # Verify the data was inserted
+    # Confirmar que los datos fueron insertados
     cursor.execute('SELECT * FROM ventas')
     rows = cursor.fetchall()
     
@@ -47,6 +48,7 @@ def create_database():
     for row in rows:
         print(f"{row[0]:2} | {row[1]:11} | {row[2]:11} | {row[3]:6} | {row[4]:9} | {row[5]}")
     
+    # Se cierra la conexión
     conn.close()
     
 if __name__ == "__main__":
