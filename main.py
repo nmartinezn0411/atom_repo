@@ -5,6 +5,9 @@ from pydantic import BaseModel
 from agent_runtime import ask_agent
 import os
 from typing import Optional
+from dotenv import load_dotenv  
+load_dotenv()
+
 
 # Crear instancia del API
 app = FastAPI(title="Text-to-SQL Agent (LangGraph + Gemini)", version="1.0.0")
@@ -15,16 +18,10 @@ api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 # Get API keys from environment variable (more secure)
 def get_valid_api_keys():
-    api_keys_str = os.getenv("VALID_API_KEYS")
-    api_keys = {}
-    for key_pair in api_keys_str.split(","):
-        if ":" in key_pair:
-            key, name = key_pair.split(":", 1)
-            api_keys[key.strip()] = name.strip()
-    return api_keys
+    api_key = os.getenv("API_KEY")
+    return api_key
 
 VALID_API_KEYS = get_valid_api_keys()
-
 async def validate_api_key(api_key: Optional[str] = Security(api_key_header)):
     if not api_key:
         raise HTTPException(
