@@ -9,7 +9,7 @@
     <style>
         .response-section { display: none; }
         .tool-call { background-color: #f8f9fa; }
-        .sql-query { font-family: monospace; }
+        .sql-query { font-family: monospace; white-space: pre-wrap; }
     </style>
 </head>
 <body class="bg-light">
@@ -48,7 +48,7 @@
                 <div class="card shadow-sm response-section" id="responseSection">
                     <div class="card-body">
                         <!-- Final Answer -->
-                        <div class="mb-4">
+                        <div class="mb-4" id="finalAnswerBlock" style="display:none;">
                             <h5 class="text-success mb-3">Respuesta Final</h5>
                             <div class="alert alert-success" id="finalAnswer"></div>
                         </div>
@@ -63,7 +63,7 @@
                         <div class="mb-4" id="resultsSection" style="display: none;">
                             <h5 class="text-warning mb-3">Query Results</h5>
                             <div class="mb-3">
-                                <strong>SQL Ejectuado:</strong>
+                                <strong>SQL Ejecutado:</strong>
                                 <div class="sql-query bg-dark text-light p-3 rounded mt-1" id="executedSql"></div>
                             </div>
                             <div id="resultsTable"></div>
@@ -84,34 +84,63 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+        const el = (id) => document.getElementById(id);
+        const show = (id) => el(id).style.display = 'block';
+        const hide = (id) => el(id).style.display = 'none';
+
+        function resetUI() {
+            // Hide all sections
+            document.querySelectorAll('.response-section').forEach(s => s.style.display = 'none');
+            hide('toolCallsSection');
+            hide('resultsSection');
+            hide('finalAnswerBlock');
+
+            // Clear contents
+            el('finalAnswer').textContent = '';
+            el('toolCalls').innerHTML = '';
+            el('executedSql').textContent = '';
+            el('resultsTable').innerHTML = '';
+            el('errorText').textContent = '';
+        }
+
         async function sendQuestion() {
-            const question = document.getElementById('question').value.trim();
-            const submitBtn = document.getElementById('submitBtn');
-            const loading = document.getElementById('loading');
-            
+            const question = el('question').value.trim();
+            const submitBtn = el('submitBtn');
+            const loading = el('loading');
+
             if (!question) {
                 alert('Please enter a question');
                 return;
             }
-            
-            // UI State
-            hideAllSections();
+
+            // Full reset before every new request (ensures complete re-render)
+            resetUI();
             loading.style.display = 'block';
             submitBtn.disabled = true;
-            
+
             try {
                 const response = await fetch('http://localhost:8000/ask', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ question })
                 });
-                
-                const data = await response.json();
-                
-                if (!response.ok) throw new Error(data.detail || `HTTP error! status: ${response.status}`);
-                
+
+                // Try to parse JSON even for non-200 to extract errors
+                let data;
+                try {
+                    data = await response.json();
+                } catch {
+                    data = null;
+                }
+
+                if (!response.ok) {
+                    const msg = data?.detail || `HTTP error! status: ${response.status}`;
+                    throw new Error(msg);
+                }
+
+                // Render (or not) based on content
                 displayResponse(data);
-                
+
             } catch (error) {
                 showError(error.message);
             } finally {
@@ -121,30 +150,40 @@
         }
         
         function displayResponse(data) {
+            const finalAnswer = (data?.final_answer ?? '').trim();
+
+            // If the new answer is empty, show nothing at all (keep everything hidden)
+            if (!finalAnswer) {
+                return;
+            }
+
             // Final Answer
-            document.getElementById('finalAnswer').textContent = data.final_answer;
-            
+            el('finalAnswer').textContent = finalAnswer;
+            show('finalAnswerBlock');
+
             // Tool Calls
-            if (data.tool_calls?.length > 0) {
-                document.getElementById('toolCallsSection').style.display = 'block';
-                document.getElementById('toolCalls').innerHTML = data.tool_calls.map((tool, index) => `
+            const toolCalls = Array.isArray(data?.tool_calls) ? data.tool_calls : [];
+            if (toolCalls.length > 0) {
+                el('toolCalls').innerHTML = toolCalls.map((tool, index) => `
                     <div class="tool-call p-3 mb-2 rounded">
-                        <strong>Tool ${index + 1}:</strong> ${tool.tool_name}<br>
-                        <strong>Query:</strong> ${tool.arguments.query}
+                        <strong>Tool ${index + 1}:</strong> ${tool.tool_name ?? ''}<br>
+                        <strong>Query:</strong> ${(tool.arguments && (tool.arguments.query ?? ''))}
                     </div>
                 `).join('');
+                show('toolCallsSection');
             }
-            
+
             // Query Results
-            if (data.result) {
-                document.getElementById('resultsSection').style.display = 'block';
-                document.getElementById('executedSql').textContent = data.result.executed_sql;
-                
-                if (data.result.rows?.length > 0) {
-                    const columns = data.result.columns;
-                    const rows = data.result.rows;
-                    
-                    document.getElementById('resultsTable').innerHTML = `
+            const result = data?.result;
+            if (result) {
+                // Executed SQL (may be empty)
+                el('executedSql').textContent = result.executed_sql ?? '';
+
+                const columns = Array.isArray(result.columns) ? result.columns : [];
+                const rows = Array.isArray(result.rows) ? result.rows : [];
+
+                if (columns.length > 0 && rows.length > 0) {
+                    el('resultsTable').innerHTML = `
                         <div class="table-responsive">
                             <table class="table table-striped table-bordered">
                                 <thead class="table-dark">
@@ -158,25 +197,29 @@
                             </table>
                         </div>
                     `;
+                } else {
+                    el('resultsTable').innerHTML = '';
                 }
+
+                show('resultsSection');
             }
-            
-            document.getElementById('responseSection').style.display = 'block';
+
+            // Only show the response container if something is visible inside
+            if (el('finalAnswerBlock').style.display === 'block' ||
+                el('toolCallsSection').style.display === 'block' ||
+                el('resultsSection').style.display === 'block') {
+                show('responseSection');
+            }
         }
         
         function showError(message) {
-            document.getElementById('errorText').textContent = message;
-            document.getElementById('errorSection').style.display = 'block';
+            resetUI(); // ensure nothing else is showing
+            el('errorText').textContent = message || 'Unknown error';
+            show('errorSection');
         }
-        
-        function hideAllSections() {
-            document.querySelectorAll('.response-section').forEach(section => {
-                section.style.display = 'none';
-            });
-        }
-        
-        // Enter key support
-        document.getElementById('question').addEventListener('keypress', function(e) {
+
+        // Enter key support (Ctrl+Enter to send)
+        el('question').addEventListener('keypress', function(e) {
             if (e.key === 'Enter' && e.ctrlKey) {
                 sendQuestion();
             }

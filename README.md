@@ -96,4 +96,21 @@ ossyNMMMNyMMhsssssssssssssshmmmhssssssso   WM: Mutter
             .-/+oossssoo+/-.
                                                                    
                                     
-```               
+```              
+---
+### Ejemplos de preguntas y respuestas
+
+Q: cual fue el precio promedio de venta en chile
+A: El precio promedio de venta en Chile fue de 1800.
+
+Q: cuales son los productos principales que tiene la empresa y como se llama
+A: La empresa TechNova vende productos electrónicos. Sus categorías principales son smartphones, notebooks y accesorios.
+
+Q: Cuales son los productos que tiene la empresa en venta y su categoria según su base de datos
+A: La empresa TechNova tiene los siguientes productos en venta, clasificados por categoría: * **Smartphones:** iPhone 14 * **Notebooks:** MacBook Air
+
+Q: Cualees son los precios y las fechas de venta que tienen registrados para el pais de argentina
+A: En Argentina, se registró una venta con fecha 2024-05-10 y un precio de 1300.
+
+Q: Cualees son los precios y las fechas de venta que tienen registrados para el pais de uruguay
+A: No se encontraron registros de ventas para Uruguay en la base de datos.
