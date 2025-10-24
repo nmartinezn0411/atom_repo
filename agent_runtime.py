@@ -11,7 +11,7 @@ from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
 from langchain_google_genai import ChatGoogleGenerativeAI
-
+from google import genai
 # Cargar .env para GOOGLE_API_KEY y otras variables de entorno
 load_dotenv()
 
@@ -58,11 +58,27 @@ def query_tool(query: str):
 TOOLS = [query_tool] 
 
 # Modelo
+'''
 model = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash-lite",
     google_api_key = os.getenv("GOOGLE_API_KEY"),
     temperature=0,
     verbose=True,
+).bind_tools(TOOLS)
+'''
+
+# Modelo (force API-key path; no ADC fallback)
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+if not GOOGLE_API_KEY:
+    raise RuntimeError("GOOGLE_API_KEY is not set (Railway → Variables).")
+
+# Build a concrete SDK client with the API key and hand it to LangChain.
+genai_client = genai.Client(api_key=GOOGLE_API_KEY)
+
+model = ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash-lite",  # also valid: "gemini-2.5-flash"
+    client=genai_client,
+    temperature=0,
 ).bind_tools(TOOLS)
 
 # SYSTEM_PROMPT con lo que debe realizar el agente e información básica de la empresa
