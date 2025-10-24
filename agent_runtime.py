@@ -75,7 +75,6 @@ if not GOOGLE_API_KEY:
 model = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash-lite",
     google_api_key=GOOGLE_API_KEY,
-    project=None,  # Evitar que busque proyecto de GCP
     temperature=0,
     verbose=True,
 ).bind_tools(TOOLS)
