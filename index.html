@@ -10,6 +10,16 @@
         .response-section { display: none; }
         .tool-call { background-color: #f8f9fa; }
         .sql-query { font-family: monospace; white-space: pre-wrap; }
+        .api-key-field { position: relative; }
+        .toggle-password { 
+            position: absolute; 
+            right: 10px; 
+            top: 50%; 
+            transform: translateY(-50%); 
+            background: none; 
+            border: none; 
+            cursor: pointer; 
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -25,11 +35,27 @@
                 <!-- Input Section -->
                 <div class="card shadow-sm mb-4">
                     <div class="card-body">
+                        <!-- API Key Field -->
+                        <div class="mb-3">
+                            <label for="apiKey" class="form-label fw-semibold">API Key:</label>
+                            <div class="api-key-field">
+                                <input type="password" class="form-control" id="apiKey" 
+                                       placeholder="Ingresa tu API key aquí"
+                                       value="example">
+                                <button type="button" class="toggle-password" onclick="togglePasswordVisibility()">
+                                    👁️
+                                </button>
+                            </div>
+                            <div class="form-text">Esta clave se enviará con tu pregunta al servidor.</div>
+                        </div>
+
+                        <!-- Question Field -->
                         <div class="mb-3">
                             <label for="question" class="form-label fw-semibold">Escriba la pregunta:</label>
                             <textarea class="form-control" id="question" rows="3" 
                                       placeholder="¿Cuál fue el precio promedio de venta en Chile?"></textarea>
                         </div>
+                        
                         <button class="btn btn-primary btn-lg" onclick="sendQuestion()" id="submitBtn">
                             Enviar pregunta
                         </button>
@@ -88,6 +114,20 @@
         const show = (id) => el(id).style.display = 'block';
         const hide = (id) => el(id).style.display = 'none';
 
+        // Toggle password visibility
+        function togglePasswordVisibility() {
+            const apiKeyField = el('apiKey');
+            const toggleButton = document.querySelector('.toggle-password');
+            
+            if (apiKeyField.type === 'password') {
+                apiKeyField.type = 'text';
+                toggleButton.textContent = '🔒';
+            } else {
+                apiKeyField.type = 'password';
+                toggleButton.textContent = '👁️';
+            }
+        }
+
         function resetUI() {
             // Hide all sections
             document.querySelectorAll('.response-section').forEach(s => s.style.display = 'none');
@@ -105,11 +145,17 @@
 
         async function sendQuestion() {
             const question = el('question').value.trim();
+            const apiKey = el('apiKey').value.trim();
             const submitBtn = el('submitBtn');
             const loading = el('loading');
 
             if (!question) {
-                alert('Please enter a question');
+                alert('Por favor ingresa una pregunta');
+                return;
+            }
+
+            if (!apiKey) {
+                alert('Por favor ingresa tu API Key');
                 return;
             }
 
@@ -119,9 +165,13 @@
             submitBtn.disabled = true;
 
             try {
-                const response = await fetch('http://localhost:8000/ask', {
+                //const response = await fetch('http://127.0.0.1:8000/ask', {
+                const response = await fetch('https://atomrepo-production.up.railway.app/ask', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    },
                     body: JSON.stringify({ question })
                 });
 
@@ -222,6 +272,13 @@
         el('question').addEventListener('keypress', function(e) {
             if (e.key === 'Enter' && e.ctrlKey) {
                 sendQuestion();
+            }
+        });
+
+        // Allow Enter key in API field to move to question field
+        el('apiKey').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                el('question').focus();
             }
         });
     </script>

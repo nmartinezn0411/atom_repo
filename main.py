@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException, Depends, Security
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from agent_runtime import ask_agent
 import os
@@ -49,6 +51,14 @@ app.add_middleware(
 # Definir la estructura de la pregunta del Frontend
 class AskRequest(BaseModel):
     question: str
+    
+# Serve static files (CSS, JS, images if any)
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
+
+# Serve your main frontend page
+@app.get("/")
+def serve_frontend():
+    return FileResponse("index.html")
 
 # Endpoint para verificar que el API responda
 @app.get("/health")
